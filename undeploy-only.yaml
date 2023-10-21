@@ -1,0 +1,39 @@
+---
+- name: Undeploy the Web App for Server
+  become: True
+  become_user: root
+  hosts: group_client:group_server
+  gather_facts: yes
+  tasks:
+  - name: Get Current Date
+    set_fact:
+      date_folder: "{{ lookup('pipe', 'date +%y-%m-%d') }}"
+  - name: Create web-app directory:Client
+    file:
+      path: "{{ CLIENT_BASE_FOLDER }}/{{ app }}/{{ date_folder }}/bkp/"
+      owner: root
+      group: root
+      state: directory
+      mode: 0775
+    when: inventory_hostname in groups['group_client']
+  - name: Backup the war/ear file from Node1
+    synchronize:
+      src: "{{ SERVER_DEPLOY_FOLDER }}/{{ app }}.{{ type }}"
+      dest: "{{ CLIENT_BASE_FOLDER }}/{{ app }}/{{ date_folder }}/bkp/"
+      mode: pull
+    when:
+      - inventory_hostname in groups['group_server']
+  - name: "Undeploy {{ app }} application"
+    community.general.jboss:
+      deploy_path: "{{ SERVER_DEPLOY_FOLDER }}"
+      deployment: "{{ app }}.{{ type }}"
+      state: absent
+    when: inventory_hostname in groups['group_server']
+    register: deployment_facts
+  - name: Wait for 2 seconds...
+    ansible.builtin.wait_for:
+     timeout: 2
+  - name: Print undeployment status
+    debug:
+      msg: "Web App Changed:{{ deployment_facts.changed }} Un-deployment Failed Status {{ deployment_facts.failed }}"
+    when: inventory_hostname in groups['group_server']
