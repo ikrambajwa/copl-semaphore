@@ -1,5 +1,5 @@
 ---
-- name: Download Web App for Deployment
+- name: Download Copl Web App for Deployment
   become: True
   become_user: root
   hosts: group_client:group_server
@@ -8,7 +8,7 @@
   - name: Get Current Date
     set_fact:
       date_folder: "{{ lookup('pipe', 'date +%y-%m-%d') }}"
-  - name: Create web-app directory:Client
+  - name: Create Web App directory:On Client
     file:
       path: "{{ CLIENT_BASE_FOLDER }}/{{ app }}/{{ date_folder }}/bkp/"
       owner: root
@@ -16,7 +16,7 @@
       state: directory
       mode: 0775
     when: inventory_hostname in groups['group_client']
-  - name: Download web-app from S3 location "{{ S3_BUCKET }}"
+  - name: Download Web App from S3 location "{{ S3_BUCKET }}"
     amazon.aws.aws_s3:
       profile: "{{ AWS_PROFILE }}"
       bucket: "{{ S3_BUCKET }}"
@@ -31,7 +31,7 @@
   - debug:
       var: getresult
     when: getresult.changed
-  - name: Check If File web-app already exists
+  - name: Check If File Web App already exists
     ansible.builtin.stat:
       path: "{{ SERVER_DEPLOY_FOLDER }}/{{ app }}.{{ type }}"
     register: file_check
@@ -40,7 +40,7 @@
     debug:
       msg: "File exists: {{ file_check.stat.exists }}."
     when: inventory_hostname in groups['group_server']
-  - name: Backup the war/ear file from Node1
+  - name: Backup the Web App (war/ear) file from Node1
     synchronize:
       src: "{{ SERVER_DEPLOY_FOLDER }}/{{ app }}.{{ type }}"
       dest: "{{ CLIENT_BASE_FOLDER }}/{{ app }}/{{ date_folder }}/bkp/"
@@ -48,7 +48,7 @@
     when:
       - inventory_hostname in groups['group_server']
       - file_check.stat.exists
-  - name: Copy the war/ear file to the Node1
+  - name: Copy the Web App (war/ear) file to the Node1
     copy:
      src: "{{ CLIENT_BASE_FOLDER }}/{{ app }}/{{ date_folder }}/{{ app }}.{{ type }}"
      dest: "{{ SERVER_TEMP_FOLDER }}/{{ app }}.{{ type }}"
@@ -65,7 +65,7 @@
   - name: Touch web-app
     ansible.builtin.command: "touch {{ SERVER_TEMP_FOLDER }}/{{ app }}.{{ type }}"
     when: inventory_hostname in groups['group_server']
-  - name: Deploy hello world application to the non-default deploy_path
+  - name: Deploy Web App to the non-default deploy_path
     community.general.jboss:
       src: "{{ SERVER_TEMP_FOLDER }}/{{ app }}.{{ type }}"
       deploy_path: "{{ SERVER_DEPLOY_FOLDER }}"
